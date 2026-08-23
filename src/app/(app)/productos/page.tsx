@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
 import { requireSession } from '@/server/session';
 import { createClient } from '@/lib/supabase/server';
-import { Badge, Card, EmptyState } from '@/components/ui';
+import Link from 'next/link';
+import { Badge, Button, Card, EmptyState } from '@/components/ui';
 import { formatMoney, formatQuantity, formatPercent } from '@/lib/format';
 import { Money } from '@/lib/money';
 import { resolvePrice, type PriceListRule } from '@/lib/pricing';
@@ -42,12 +43,24 @@ export default async function ProductsPage() {
 
   return (
     <div className="space-y-4">
-      <header>
-        <h1 className="text-xl font-semibold text-madera-900">Productos</h1>
-        <p className="text-sm text-madera-500">
-          {catalog?.length ?? 0} variantes en el catálogo
-          {isOwner && ' · el margen se calcula con el último costo de reposición'}
-        </p>
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold text-madera-900">Productos</h1>
+          <p className="text-sm text-madera-500">
+            {catalog?.length ?? 0} variantes en el catálogo
+            {isOwner && ' · el margen se calcula con el último costo de reposición'}
+          </p>
+        </div>
+        {isOwner && (
+          <div className="flex gap-2">
+            <Link href="/datos">
+              <Button variant="secondary">Importar / exportar</Button>
+            </Link>
+            <Link href="/productos/nuevo">
+              <Button>Nuevo producto</Button>
+            </Link>
+          </div>
+        )}
       </header>
 
       <Card>
@@ -55,6 +68,13 @@ export default async function ProductsPage() {
           <EmptyState
             title="Todavía no hay productos"
             description="Importá el catálogo desde la plantilla XLSX o cargalos uno por uno."
+            action={
+              isOwner ? (
+                <Link href="/productos/nuevo" className="mt-2">
+                  <Button>Crear el primero</Button>
+                </Link>
+              ) : undefined
+            }
           />
         ) : (
           <div className="overflow-x-auto">

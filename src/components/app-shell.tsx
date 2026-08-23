@@ -39,6 +39,7 @@ export function AppShell({
       ? [
           { href: '/empleados', label: 'Empleados' },
           { href: '/reportes', label: 'Reportes' },
+          { href: '/datos', label: 'Importar y exportar' },
           { href: '/auditoria', label: 'Auditoría' },
           { href: '/configuracion', label: 'Configuración' },
         ]

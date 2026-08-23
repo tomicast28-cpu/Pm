@@ -24,11 +24,11 @@ Leyenda: ✅ implementado · 🟡 parcial · ⬜ pendiente
 | PWA instalable (manifest + iconos) | ✅ | `public/manifest.webmanifest` |
 | CI de typecheck, lint y pruebas | ✅ | `.github/workflows/ci.yml` |
 
-## Fase 1 — Núcleo operativo · ✅ con salvedades
+## Fase 1 — Núcleo operativo · ✅
 
 | Requisito | Estado | Nota |
 |---|---|---|
-| Catálogo, variantes y atributos flexibles | ✅ | `/productos` es de solo lectura; el alta se hace por acción de servidor o semilla |
+| Catálogo, variantes y atributos flexibles | ✅ | Lista en `/productos`, alta en `/productos/nuevo` |
 | Combos virtual y prearmado | ✅ | `assemble_bundle` / `disassemble_bundle` |
 | Servicios no inventariables | ✅ | Grabado y Envío en la semilla |
 | Listas de precio derivadas con redondeo | ✅ | `app.effective_price`, `src/lib/pricing.ts` |
@@ -49,11 +49,11 @@ Leyenda: ✅ implementado · 🟡 parcial · ⬜ pendiente
 | Reversión de venta con contramovimientos | ✅ | `reverse_sale` |
 | Comprobante imprimible A4 | ✅ | `/comprobante/[id]` |
 | Plantilla XLSX de importación | ✅ | `npm run xlsx:template` |
-| **Importación XLSX (subir, mapear, validar, aplicar)** | ⬜ | Las tablas `import_jobs` / `import_job_rows` existen; falta la pantalla y el procesamiento |
-| **Exportación XLSX** | ⬜ | Pendiente |
-| **Alta de producto desde la interfaz** | 🟡 | La acción `createProduct` existe y funciona; falta el formulario |
-| **Actualización masiva de precios** | ⬜ | Previsto en fase 3 |
-| **Inventario físico (conteo)** | 🟡 | Modelo completo (`inventory_counts`); falta la pantalla y la función de aprobación |
+| Importación XLSX (previsualizar, validar, aplicar, revertir) | ✅ | `/datos` · `apply_catalog_import` / `revert_catalog_import` |
+| Exportación XLSX | ✅ | `/api/exportar/{catalogo,stock,movimientos,ventas,caja,rentabilidad}` |
+| Alta de producto desde la interfaz | ✅ | `/productos/nuevo`, con variantes y combos |
+| Actualización masiva de precios | ⬜ | Previsto en fase 3 |
+| Inventario físico (conteo) | 🟡 | Modelo completo (`inventory_counts`); falta la pantalla y la función de aprobación |
 
 ## Fase 2 — Pedidos y cumplimiento · ⬜
 
@@ -84,6 +84,10 @@ pruebas —ticket promedio, sell-through, rotación, cobertura, GMROI, conversi�
 de presupuestos, morosidad, ABC/Pareto, la regla honesta de «menos vendido» y
 las recomendaciones de stock—, todas devolviendo «datos insuficientes» en lugar
 de inventar.
+
+También está la exportación a Excel de rentabilidad por línea vendida, con
+costo de reposición, costo promedio, costo FIFO y comisión imputada a prorrata
+—reservada al dueño tanto por la ruta como por la RLS—.
 
 Falta: el tablero completo del Centro de decisiones, los resúmenes diario y
 mensual persistidos, la afinidad de compra, la pantalla de ventas perdidas
@@ -125,7 +129,8 @@ Facturación manual modelada en `manual_invoices`. Falta la interfaz
 | 28 | El empleado no obtiene costos ni márgenes | ✅ | `01_permisos.sql` |
 | 29 | Descuento del empleado auditado | ✅ | `03_pagos_caja.sql` |
 | 30 | Cambio de precio/costo en historial | ✅ | `set_variant_price`, `set_variant_cost` |
-| 31–36 | Reportes | 🟡 | vistas y fórmulas sí; pantallas, fase 4 |
+| 31–35 | Reportes | 🟡 | vistas, fórmulas y exportaciones sí; pantallas, fase 4 |
+| 36 | Exportaciones respetan permisos y totales | ✅ | `/api/exportar/*` consulta con la sesión del usuario, así que la RLS decide qué filas salen |
 | 37–40 | Carteles | ⬜ | fase 4 |
 
 ## Pruebas end-to-end

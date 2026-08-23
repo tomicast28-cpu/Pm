@@ -105,6 +105,19 @@ select app.purge_demo_data();
 | `npm run db:test`      | Pruebas de RLS, funciones, concurrencia e idempotencia|
 | `npm run xlsx:template`| Regenera la plantilla de importación                  |
 
+## Importar y exportar
+
+**Importar catálogo**: *Importar y exportar* → descargar la plantilla XLSX,
+completarla y subirla. El sistema previsualiza, valida fila por fila y deja
+descargar los errores en CSV. Se aplican solo las filas válidas; un SKU que ya
+existe **no se sobrescribe**, se informa y se omite. El lote se puede revertir
+mientras sus productos no hayan tenido movimientos posteriores.
+
+**Exportar**: `catalogo`, `stock`, `movimientos`, `ventas`, `caja` y
+`rentabilidad` (esta última solo para el dueño). Las consultas se hacen con la
+sesión de quien descarga, así que la exportación no puede convertirse en la
+puerta trasera por la que el empleado se lleva los costos.
+
 ## Cómo está organizado
 
 ```
