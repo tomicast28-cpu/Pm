@@ -1,0 +1,67 @@
+@import 'tailwindcss';
+
+/*
+  Punto Madera — tema inicial editable.
+  Los colores viven en `brand_settings`; estos son el punto de partida y no una
+  identidad definitiva hardcodeada.
+*/
+@theme {
+  --color-madera-50:  #faf6f0;
+  --color-madera-100: #f5efe6;
+  --color-madera-200: #e8d9c5;
+  --color-madera-300: #d4bc9c;
+  --color-madera-400: #b9906a;
+  --color-madera-500: #a3744d;
+  --color-madera-600: #7a4b2a;
+  --color-madera-700: #653d22;
+  --color-madera-800: #4a2d19;
+  --color-madera-900: #2b2118;
+
+  --color-fuego-400: #e86a4e;
+  --color-fuego-500: #d94f30;
+  --color-fuego-600: #b83e23;
+
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background-color: var(--color-madera-50);
+  color: var(--color-madera-900);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Números tabulares: en una caja las columnas tienen que alinearse. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* El foco debe verse: se navega con teclado en el mostrador. */
+:focus-visible {
+  outline: 2px solid var(--color-fuego-500);
+  outline-offset: 2px;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: white;
+  }
+  .print-a4 {
+    width: 210mm;
+    min-height: 297mm;
+    padding: 15mm;
+    margin: 0;
+  }
+}

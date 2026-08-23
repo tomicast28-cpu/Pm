@@ -346,3 +346,42 @@ begin
   return format('Se eliminaron los datos demo (%s organización).', v_count);
 end;
 $$;
+
+-- Próximo SKU interno automático (decisión 3: SKU automático editable).
+create or replace function next_sku()
+returns text
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  perform app.require_permission('catalog.manage');
+  return app.next_document_number(app.current_org_id(), 'sku', null);
+end;
+$$;
+
+-- Envoltorio público de `app.cash_session_expected`: PostgREST solo expone
+-- funciones del esquema `public`. Valida que la sesión sea de la organización
+-- de quien pregunta antes de devolver nada.
+create or replace function cash_session_expected_public(p_session uuid)
+returns table (
+  payment_method_id uuid,
+  label text,
+  affects_drawer boolean,
+  expected_amount app.money
+)
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  if not exists (
+    select 1 from cash_sessions
+     where id = p_session and organization_id = app.current_org_id()
+  ) then
+    raise exception 'Sesión de caja inexistente' using errcode = 'no_data_found';
+  end if;
+
+  return query select * from app.cash_session_expected(p_session);
+end;
+$$;
