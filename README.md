@@ -49,6 +49,9 @@ Tres reglas sostienen todo lo demás:
 3. **Nada confirmado se borra.** Las correcciones son reversos o ajustes con
    motivo, y todo queda auditado.
 
+> **¿Primera vez?** Seguí [`PRIMEROS_PASOS.md`](PRIMEROS_PASOS.md): es la guía
+> paso a paso, desde instalar Node hasta la primera venta de prueba.
+
 ## Puesta en marcha
 
 Requisitos: Node 22+, Docker (para Supabase local) o PostgreSQL 15+.
@@ -150,6 +153,7 @@ tests/
 
 ## Documentación
 
+- [`PRIMEROS_PASOS.md`](PRIMEROS_PASOS.md) — cómo hacerlo andar, paso a paso
 - [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md) — fases, tareas y criterios de cierre
 - [`ESTADO_REQUISITOS.md`](ESTADO_REQUISITOS.md) — qué está implementado y qué no
 - [`DECISIONES_TECNICAS.md`](DECISIONES_TECNICAS.md) — decisiones y sus motivos
