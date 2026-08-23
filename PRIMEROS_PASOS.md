@@ -276,6 +276,13 @@ cierre. Andá a **Caja → Abrir caja**.
 Los permisos están en la tabla `role_permissions`. Podés verlos en
 *Configuración* o cambiarlos desde el SQL Editor.
 
+**«permission denied for schema auth» al correr el script del paso 5**
+Si te pasa, el archivo `supabase/scripts/vincular-usuario.sql` que tenés es una
+versión vieja que intentaba crear una función dentro del esquema `auth`, algo
+que Supabase no permite ni al rol `postgres`. Actualizá el código con
+`git pull` y volvé a copiar el archivo. La versión corregida solo **lee**
+`auth.users`, que sí está permitido.
+
 **`npm install` falla**
 Suele ser una versión vieja de Node. Verificá con `node --version` que diga
 `v20` o más.

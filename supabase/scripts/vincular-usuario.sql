@@ -11,9 +11,19 @@
 --   select app.vincular_usuario('empleado@tudominio.com', 'employee', 'Nombre del Empleado');
 --
 -- Es idempotente: correrla dos veces con el mismo correo no duplica nada.
+--
+-- Nota: este archivo NO crea nada dentro del esquema `auth`. En Supabase ese
+-- esquema pertenece a `supabase_auth_admin` y ni siquiera el rol `postgres`
+-- puede escribir ahí; solo se lee `auth.users`, que sí está permitido.
 -- =============================================================================
 
-create or replace function app.vincular_usuario(
+-- Se recrean desde cero: `create or replace` conservaría el propietario que
+-- tuvieran de antes, y una función SECURITY DEFINER que no pertenezca al dueño
+-- de las tablas queda sujeta a la RLS y no vería la organización.
+drop function if exists app.vincular_usuario(text, app.user_role, text);
+drop function if exists app.asegurar_permisos_empleado(uuid);
+
+create function app.vincular_usuario(
   p_email text,
   p_role  app.user_role default 'employee',
   p_nombre text default null
@@ -24,44 +34,59 @@ security definer
 set search_path = public, pg_temp
 as $$
 declare
-  v_user   uuid;
-  v_org    uuid;
-  v_branch uuid;
-  v_nombre text;
-  v_previo uuid;
+  v_user     uuid;
+  v_meta     jsonb;
+  v_org      uuid;
+  v_branch   uuid;
+  v_nombre   text;
+  v_previo   uuid;
 begin
   -- 1. La persona tiene que existir en Auth. Si no, hay que crearla primero
   --    desde el panel: Authentication → Users → Add user.
-  select id into v_user from auth.users where lower(email) = lower(p_email);
+  select u.id, u.raw_user_meta_data
+    into v_user, v_meta
+    from auth.users u
+   where lower(u.email) = lower(btrim(p_email));
+
   if v_user is null then
     return format('No existe ningún usuario con el correo %s. '
-                  'Crealo primero en Authentication → Users → Add user.', p_email);
+                  'Crealo primero en Authentication → Users → Add user '
+                  '(acordate de marcar «Auto Confirm User»).', p_email);
   end if;
 
   -- 2. Organización y sucursal. Se toma la primera que exista.
   select id into v_org from organizations order by created_at limit 1;
   if v_org is null then
-    return 'No hay ninguna organización creada. Cargá primero la configuración inicial.';
+    return 'No hay ninguna organización creada. Cargá primero supabase/seed.sql '
+           'o la configuración inicial del negocio.';
   end if;
 
-  select id into v_branch from branches where organization_id = v_org order by created_at limit 1;
+  select id into v_branch
+    from branches
+   where organization_id = v_org
+   order by created_at
+   limit 1;
 
+  -- 3. Nombre: el que se pase por parámetro, si no el de los metadatos de Auth,
+  --    y como último recurso la parte del correo anterior a la arroba.
   v_nombre := coalesce(
     nullif(btrim(p_nombre), ''),
-    nullif(btrim(auth.users_full_name(v_user)), ''),
+    nullif(btrim(coalesce(v_meta ->> 'full_name', v_meta ->> 'name', '')), ''),
     split_part(p_email, '@', 1)
   );
 
-  -- 3. Si había un perfil con ese correo pero otro id (por ejemplo, el que dejó
+  -- 4. Si había un perfil con ese correo pero otro id (por ejemplo, el que dejó
   --    la semilla demo), se reemplaza por el del usuario real.
-  select id into v_previo from user_profiles
-   where lower(email) = lower(p_email) and id <> v_user;
+  select id into v_previo
+    from user_profiles
+   where lower(email) = lower(btrim(p_email)) and id <> v_user;
+
   if v_previo is not null then
     delete from user_profiles where id = v_previo;
   end if;
 
   insert into user_profiles (id, organization_id, branch_id, full_name, role, email, is_active)
-  values (v_user, v_org, v_branch, v_nombre, p_role, p_email, true)
+  values (v_user, v_org, v_branch, v_nombre, p_role, btrim(p_email), true)
   on conflict (id) do update
     set organization_id = excluded.organization_id,
         branch_id       = excluded.branch_id,
@@ -71,7 +96,7 @@ begin
         is_active       = true,
         updated_at      = now();
 
-  -- 4. Un empleado necesita su ficha y los permisos de su rol.
+  -- 5. Un empleado necesita su ficha y los permisos de su rol.
   if p_role = 'employee' then
     insert into employee_profiles (organization_id, user_id)
     values (v_org, v_user)
@@ -86,25 +111,11 @@ begin
 end;
 $$;
 
--- Lee el nombre que se haya cargado en los metadatos del usuario de Auth.
-create or replace function auth.users_full_name(p_user uuid)
-returns text
-language sql
-stable
-security definer
-as $$
-  select coalesce(
-    raw_user_meta_data ->> 'full_name',
-    raw_user_meta_data ->> 'name'
-  )
-  from auth.users where id = p_user
-$$;
-
 -- -----------------------------------------------------------------------------
 -- Permisos del empleado según la sección 5.2 de la especificación.
 -- Se cargan si todavía no estaban; no pisa lo que el dueño haya cambiado.
 -- -----------------------------------------------------------------------------
-create or replace function app.asegurar_permisos_empleado(p_org uuid)
+create function app.asegurar_permisos_empleado(p_org uuid)
 returns void
 language plpgsql
 security definer
