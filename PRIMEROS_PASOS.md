@@ -122,26 +122,58 @@ no existe el usuario, es que faltó crearlo en el paso anterior o no marcaste
 
 ## Paso 6 · Conectar la aplicación con la base
 
-1. En Supabase: **Project Settings → API**. Vas a ver dos datos:
-   - **Project URL**
-   - **anon public** (una cadena larga)
-2. En la carpeta del proyecto, copiá el archivo de ejemplo:
+Hacen falta dos datos del panel de Supabase. Están en lugares distintos.
+
+### 6.1 · La dirección del proyecto (Project URL)
+
+Es simplemente `https://` + el **Project ID** + `.supabase.co`.
+
+El Project ID lo tenés en **Project Settings → General**, en el recuadro
+*Project ID*. Si dice `abcdefghijklmnop`, tu dirección es:
+
+```
+https://abcdefghijklmnop.supabase.co
+```
+
+> También aparece completa en el menú lateral, en **Data API** (sección
+> *INTEGRATIONS*).
+
+### 6.2 · La clave pública
+
+En el menú lateral, sección *CONFIGURATION*, entrá a **API Keys**.
+
+Ahí vas a ver una de estas dos cosas, según cuándo se creó tu proyecto:
+
+- Una **Publishable key**, que empieza con `sb_publishable_...`
+- O, en la solapa **Legacy API keys**, una fila `anon` `public` con una cadena
+  larga que empieza con `eyJ...`
+
+**Cualquiera de las dos sirve.** Copiá la que tengas.
+
+> ⚠️ En esa misma pantalla hay otra clave llamada **`service_role`** o **secret**.
+> **Esa no.** Elude todos los controles de seguridad de la base. No va en
+> `.env.local` ni en ningún lado que llegue al navegador.
+
+### 6.3 · Escribir el archivo
+
+En la carpeta del proyecto:
 
 ```bash
 cp .env.example .env.local
 ```
 
-3. Abrí `.env.local` con cualquier editor de texto y completá las dos primeras
-   líneas:
+Abrí `.env.local` con cualquier editor de texto y completá las dos primeras
+líneas con lo que copiaste:
 
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://abcdefghijklmnop.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOi...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_xxxxxxxxxxxx
 ```
 
-> La clave `anon` es pública por diseño: no da acceso a nada por sí sola, porque
-> la seguridad la aplica la base de datos. **La clave `service_role` no va acá
-> ni en ningún lado del navegador.**
+Sin comillas, sin espacios alrededor del `=`, y todo en una sola línea.
+
+> La clave pública es pública por diseño: no da acceso a nada por sí sola,
+> porque la seguridad la aplica la base de datos con sus políticas de acceso.
 
 ## Paso 7 · Arrancar
 
@@ -259,6 +291,14 @@ select app.purge_demo_data();
 El archivo `.env.local` no existe o está mal escrito. Tiene que estar en la
 carpeta principal del proyecto (al lado de `package.json`), y después de
 editarlo hay que cortar el servidor (`Ctrl+C`) y volver a correr `npm run dev`.
+Fijate también que el archivo se llame exactamente `.env.local` —con el punto
+adelante— y no `.env.local.txt`, que es lo que hace el Bloc de notas de Windows
+si no elegís *Todos los archivos* al guardar.
+
+**No encuentro «Project URL» ni «anon public» en Project Settings → General**
+El panel de Supabase cambió: ahora la dirección se arma con el *Project ID* que
+sí está en esa pantalla, y la clave vive en **API Keys**, en el menú lateral.
+Está explicado en el paso 6.
 
 **«Correo o contraseña incorrectos» aunque estén bien**
 Casi siempre es que al crear el usuario no marcaste *Auto Confirm User*. Entrá a
