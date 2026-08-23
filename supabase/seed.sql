@@ -8,6 +8,26 @@
 
 begin;
 
+-- pgcrypto vive en `extensions` en Supabase y en `public` en una instalación
+-- local. Este envoltorio encuentra `crypt` en cualquiera de los dos.
+create or replace function extensions_crypt(p_password text)
+returns text
+language plpgsql
+as $fn$
+declare v_hash text;
+begin
+  begin
+    execute 'select extensions.crypt($1, extensions.gen_salt(''bf''))'
+      into v_hash using p_password;
+  exception when others then
+    execute 'select public.crypt($1, public.gen_salt(''bf''))'
+      into v_hash using p_password;
+  end;
+  return v_hash;
+end;
+$fn$;
+
+
 do $$
 declare
   v_org       uuid := '11111111-1111-1111-1111-111111111111';
@@ -73,11 +93,40 @@ begin
   -- ---------------------------------------------------------------------------
   -- Usuarios: dueño y empleado (auth.users local; en Supabase los crea Auth)
   -- ---------------------------------------------------------------------------
-  insert into auth.users (id, email, raw_user_meta_data)
-  values
-    (v_owner,    'dueno@puntomadera.test',    '{"full_name":"Dueño Punto Madera"}'::jsonb),
-    (v_employee, 'empleado@puntomadera.test', '{"full_name":"Empleado Mostrador"}'::jsonb)
-  on conflict (id) do nothing;
+  -- El esquema `auth.users` real de Supabase tiene muchas más columnas que la
+  -- versión mínima que se crea para desarrollo local. Se arma el INSERT con las
+  -- columnas que existan, para que la misma semilla sirva en ambos casos.
+  declare
+    v_password text := coalesce(nullif(current_setting('app.demo_password', true), ''),
+                                'punto-madera-demo');
+    v_columns text := 'id, email, encrypted_password, raw_user_meta_data';
+    v_values_owner text;
+    v_values_employee text;
+  begin
+    v_values_owner := format('%L, %L, extensions_crypt(%L), %L',
+      v_owner, 'dueno@puntomadera.test', v_password, '{"full_name":"Dueño Punto Madera"}');
+    v_values_employee := format('%L, %L, extensions_crypt(%L), %L',
+      v_employee, 'empleado@puntomadera.test', v_password, '{"full_name":"Empleado Mostrador"}');
+
+    -- Columnas que Supabase exige y la versión local no tiene.
+    if exists (select 1 from information_schema.columns
+                where table_schema = 'auth' and table_name = 'users' and column_name = 'aud') then
+      v_columns := v_columns || ', aud, role, instance_id, email_confirmed_at,
+                                 raw_app_meta_data, created_at, updated_at';
+      v_values_owner := v_values_owner ||
+        format(', %L, %L, %L, now(), %L, now(), now()',
+               'authenticated', 'authenticated', '00000000-0000-0000-0000-000000000000',
+               '{"provider":"email","providers":["email"]}');
+      v_values_employee := v_values_employee ||
+        format(', %L, %L, %L, now(), %L, now(), now()',
+               'authenticated', 'authenticated', '00000000-0000-0000-0000-000000000000',
+               '{"provider":"email","providers":["email"]}');
+    end if;
+
+    execute format(
+      'insert into auth.users (%s) values (%s), (%s) on conflict (id) do nothing',
+      v_columns, v_values_owner, v_values_employee);
+  end;
 
   insert into user_profiles (id, organization_id, branch_id, full_name, role, email, is_demo)
   values
