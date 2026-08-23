@@ -32,7 +32,7 @@ create table customers (
   created_at        timestamptz not null default now(),
   updated_at        timestamptz not null default now()
 );
-create index customers_name_trgm_idx on customers using gin (name_normalized gin_trgm_ops);
+create index customers_name_trgm_idx on customers using gin (name_normalized extensions.gin_trgm_ops);
 create unique index customers_walkin_uq on customers (organization_id) where is_walk_in;
 
 create type app.order_kind as enum ('sale', 'quote', 'order');

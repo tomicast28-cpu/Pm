@@ -2,9 +2,18 @@
 -- 0001 — Base técnica: extensiones, esquema `app`, helpers de sesión, auditoría.
 -- =============================================================================
 
-create extension if not exists "pgcrypto";
-create extension if not exists "unaccent";
-create extension if not exists "pg_trgm";
+-- Supabase alojado instala las extensiones en el esquema `extensions`; una
+-- PostgreSQL limpia las pondría en `public`. Se fuerza `extensions` en ambos
+-- casos para que el resto de las migraciones pueda calificarlas siempre igual.
+create schema if not exists extensions;
+
+create extension if not exists "pgcrypto" with schema extensions;
+create extension if not exists "unaccent" with schema extensions;
+create extension if not exists "pg_trgm" with schema extensions;
+
+-- En Supabase este permiso ya viene dado; en una instalación limpia hay que
+-- otorgarlo o las columnas generadas que normalizan texto fallan al escribir.
+grant usage on schema extensions to public;
 
 create schema if not exists app;
 
@@ -41,20 +50,34 @@ begin
   end if;
 end $$;
 
--- auth.uid() lee el claim `sub` del JWT que Supabase deja en `request.jwt.claims`.
-create or replace function auth.uid()
-returns uuid
-language sql
-stable
-as $$
-  select nullif(
-    coalesce(
-      current_setting('request.jwt.claim.sub', true),
-      (nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'sub')
-    ),
-    ''
-  )::uuid
-$$;
+-- auth.uid() lee el claim `sub` del JWT. En Supabase ya existe y pertenece a
+-- `supabase_auth_admin`: intentar reemplazarla fallaría por permisos, así que
+-- solo se crea cuando no está (PostgreSQL local y CI).
+do $$
+begin
+  if not exists (
+    select 1
+      from pg_proc p
+      join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'auth' and p.proname = 'uid'
+  ) then
+    execute $fn$
+      create function auth.uid()
+      returns uuid
+      language sql
+      stable
+      as $body$
+        select nullif(
+          coalesce(
+            current_setting('request.jwt.claim.sub', true),
+            (nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'sub')
+          ),
+          ''
+        )::uuid
+      $body$;
+    $fn$;
+  end if;
+end $$;
 
 -- -----------------------------------------------------------------------------
 -- Tipos de dominio
@@ -74,7 +97,7 @@ language sql
 immutable
 parallel safe
 as $$
-  select lower(public.unaccent('public.unaccent'::regdictionary, coalesce(p, '')))
+  select lower(extensions.unaccent('extensions.unaccent'::regdictionary, coalesce(p, '')))
 $$;
 
 -- -----------------------------------------------------------------------------

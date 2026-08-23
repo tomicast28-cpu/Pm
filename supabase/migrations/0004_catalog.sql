@@ -44,7 +44,7 @@ create table products (
   updated_at            timestamptz not null default now()
 );
 create index on products (organization_id, is_active);
-create index products_name_trgm_idx on products using gin (name_normalized gin_trgm_ops);
+create index products_name_trgm_idx on products using gin (name_normalized extensions.gin_trgm_ops);
 
 create table product_variants (
   id                  uuid primary key default gen_random_uuid(),
@@ -71,7 +71,7 @@ create table product_variants (
   unique (organization_id, sku)
 );
 create index on product_variants (product_id);
-create index product_variants_sku_trgm_idx on product_variants using gin (sku gin_trgm_ops);
+create index product_variants_sku_trgm_idx on product_variants using gin (sku extensions.gin_trgm_ops);
 create unique index product_variants_barcode_uq on product_variants (organization_id, barcode) where barcode is not null;
 
 create table product_images (
